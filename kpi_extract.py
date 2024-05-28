@@ -44,8 +44,9 @@ class KpiExtractor:
         units = '|'.join(map(re.escape, self.key_lib[kpi]))
         return units
 
-# 示例用法
-extractor = KpiExtractor()
-command = "The system has an accuracy 99%, a 100 Mbps throughput, latency of 50 ms, a jitter of 5 ms, and packet loss of 0.1%. Also, the delay 5 seconds is critical."
-result = extractor.kpi_extract(command)
-print(result)
+if __name__ == "__main__":
+    # 示例用法
+    extractor = KpiExtractor()
+    command = "The system has an accuracy 99%, a 100 Mbps throughput, latency of 50 ms, a jitter of 5 ms, and packet loss of 0.1%. Also, the delay 5 seconds is critical."
+    result = extractor.kpi_extract(command)
+    print(result)
