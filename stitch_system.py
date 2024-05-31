@@ -191,13 +191,13 @@ class StitchSystem:
         best_distance = float('inf')
         best_stitch_position = None
 
-        for i in range(n):
-            for j in range(i + 1, n):
-                a, b = i, j
+        for i in range(n):  # 前置模型
+            for j in range(i, n):   
+                a, b = self.model_flops[i], self.model_flops[j]     # 两个模型的计算量
                 
                 # 计算组合系数
                 if a != b:
-                    stitching_position = int(((target_flops - b) / (b - a)) * self.model_layers)        # 缝合位置
+                    stitching_position = int(((target_flops - a) / (b - a)) * self.model_layers)        # 缝合位置
                     w1 = stitching_position / self.model_layers
                     w2 = 1 - w1
                     
@@ -209,7 +209,16 @@ class StitchSystem:
                         if distance < best_distance:
                             best_distance = distance
                             best_stitch_position = stitching_position
-                            best_combination = ((a, b), (w1, w2))
+                            best_combination = ((i, j), (w1, w2))
+                else:   # 后置模型和前置模型采用相同的模型
+                    stitching_position = 0
+                    distance = abs(self.model_flops[i] - target_flops)
+                    w1 = 1
+                    w2 = 0
+                    if distance < best_distance:
+                        best_distance = distance
+                        best_stitch_position = stitching_position
+                        best_combination = ((i, j), (w1, w2))
         # 最优模型组合
         model1_index, model2_index = best_combination[0]
         model1_cof, model2_cof = best_combination[1]
@@ -249,7 +258,7 @@ class StitchSystem:
                     # 同一层部署两个模型
                     c, r = self.layers[i]
                     trans_time = sum(data_size * num / self.layers[k][1] for k in range(i))
-                    comp_time = (self.model_flops[model1_index] * model1_cof/c + model2_index * model2_cof/c)*num
+                    comp_time = (self.model_flops[model1_index] * model1_cof/c + self.model_flops[model2_index] * model2_cof/c)*num
                     total_time = trans_time + comp_time
                 else:
                     # 不同层部署两个模型
@@ -281,7 +290,7 @@ class StitchSystem:
         trans_num = best_combination[1]
         if tolerative_trans_delay > best_trans_time:    # 存在带宽冗余
             toler_rate = data_size*num*trans_num/tolerative_trans_delay     # 可容忍速率
-        else:
+        else:       # 不存在冗余带宽，直接按照网络最高带宽
             toler_rate = data_size*num*trans_num/best_trans_time
         real_rate = data_size*num*trans_num/best_trans_time
         return best_combination, best_time, best_trans_time, best_comp_time, toler_rate, real_rate
@@ -295,7 +304,7 @@ stitch_system = StitchSystem()
 
 
 output_acc, model1_index, model2_index, stitch_pos, layer1, layer2, least_tot_time, least_trans_time,\
-      least_comp_time, toler_rate, real_rate = stitch_system.cal_delay(78, 100, 0.1, 50)
+      least_comp_time, toler_rate, real_rate = stitch_system.cal_delay(20, 63, 0.1, 500)
 
 
 print('模型准确率为{}，模型1索引{}，模型2索引{}，缝合位置{}，模型1部署网络层{}，模型2部署网络层{}，最小总时间{}，最小传输时间{}, 最小推理时间{}，可容忍速率{}, 实际速率{}'\
