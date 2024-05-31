@@ -241,7 +241,7 @@ class StitchSystem:
                 if i == j:
                     # 同一层部署两个模型
                     c, r = self.layers[i]
-                    trans_time = sum(data_size / self.layers[k][1] for k in range(i))
+                    trans_time = sum(data_size * num / self.layers[k][1] for k in range(i))
                     comp_time = (self.model_flops[model1_index] * model1_cof/c + model2_index * model2_cof/c)*num
                     total_time = trans_time + comp_time
                 else:
@@ -254,8 +254,8 @@ class StitchSystem:
                     comp_time2 = (self.model_flops[model2_index] * model2_cof/cj)*num
                     
                     # 传输时延
-                    trans_time1 = sum(data_size / self.layers[k][1] for k in range(i))  # 传输到第一个层
-                    trans_time2 = sum(data_size / self.layers[k][1] for k in range(i, j))  # 传输到第二个层
+                    trans_time1 = sum(data_size * num / self.layers[k][1] for k in range(i))  # 传输到第一个层
+                    trans_time2 = sum(data_size * num / self.layers[k][1] for k in range(i, j))  # 传输到第二个层
                     
                     trans_time = trans_time1 + trans_time2
 
@@ -273,10 +273,10 @@ class StitchSystem:
         # 总传输次数只与后置模型的位置有关
         trans_num = best_combination[1]
         if tolerative_trans_delay > best_trans_time:    # 存在带宽冗余
-            toler_rate = tolerative_trans_delay/(data_size*num*trans_num)     # 可容忍速率
+            toler_rate = data_size*num*trans_num/tolerative_trans_delay     # 可容忍速率
         else:
-            toler_rate = best_comp_time/(data_size*num*trans_num)
-        real_rate = best_comp_time/(data_size*num*trans_num)
+            toler_rate = data_size*num*trans_num/best_trans_time
+        real_rate = data_size*num*trans_num/best_trans_time
         return best_combination, best_time, best_trans_time, best_comp_time, toler_rate, real_rate
 
 
