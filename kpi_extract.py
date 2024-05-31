@@ -3,12 +3,12 @@ import re
 class KpiExtractor:
     def __init__(self) -> None:
         self.key_lib = {
-            'latency': ['latency', 'ms', 'milliseconds', 'second', 'seconds'],
-            'jitter': ['jitter', 'ms', 'milliseconds', 'second', 'seconds'],
+            # 'latency': ['latency', 'ms', 'milliseconds', 'second', 'seconds'],
+            # 'jitter': ['jitter', 'ms', 'milliseconds', 'second', 'seconds'],
             'delay': ['delay', 'second', 'seconds', 'minute', 'minutes', 'hour', 'hours', 'ms', 'milliseconds'],
             'accuracy': ['accuracy', 'percent', '%'],
-            'throughput': ['throughput', 'kbps', 'mbps', 'gbps', 'bps', 'bit per second', 'bits per second'],
-            'packet_loss': ['packet loss', 'percent', '%']
+            # 'throughput': ['throughput', 'kbps', 'mbps', 'gbps', 'bps', 'bit per second', 'bits per second'],
+            # 'packet_loss': ['packet loss', 'percent', '%']
         }
 
     def kpi_extract(self, command: str):

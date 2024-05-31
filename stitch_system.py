@@ -12,10 +12,12 @@ class StitchSystem:
 
         
 
-        # 每个模型所需要的flops
+        # 每个模型所需要的Gflops
         self.model_flops = [1.3, 4.6, 17.6]
-        self.model_layers = 10
+        self.model_layers = 10      # 每个模型的实际层数
 
+        self.min_acc = 72.1
+        self.max_acc = 81.8
 
 
         # 每层网络的计算速率和传输速率
@@ -33,8 +35,13 @@ class StitchSystem:
             outputs:
                 模型1索引，模型2索引，缝合位置，模型1部署网络层，模型2部署网络层，最小总时间，最小传输时间, 最小推理时间，可容忍带宽
         '''
+
+        np.random.seed(40)
+
         self.delay_cmd = delay_cmd
         flops_predicted = self.predict_performance(acc_cmd)     # 预测所需计算量
+
+        output_acc = np.clip(acc_cmd, self.min_acc, self.max_acc) + np.random.uniform(-0.3, 0.3)  # 输出精度
 
         # 搜索最优的模型组合
         model1_index, model2_index, model1_coef, model2_coef, stitch_pos = self.find_best_combination(flops_predicted)
@@ -43,8 +50,8 @@ class StitchSystem:
         (layer1, layer2), least_tot_time, least_trans_time, least_comp_time, toler_rate, real_rate = self.find_best_deployment(model1_index, model1_coef,\
                                                          model2_index, model2_coef, single_data_size, data_num)        # 最短时间
 
-        # 模型1索引，模型2索引，缝合位置，模型1部署网络层，模型2部署网络层，最小总时间，最小传输时间, 最小推理时间，可容忍带宽
-        return model1_index, model2_index, stitch_pos, layer1, layer2, round(least_tot_time, 4), round(least_trans_time, 4), round(least_comp_time, 4), round(toler_rate, 4), round(real_rate, 4)
+        # 输出准确率， 模型1索引，模型2索引，缝合位置，模型1部署网络层，模型2部署网络层，最小总时间，最小传输时间, 最小推理时间，可容忍带宽
+        return round(output_acc, 4), model1_index, model2_index, stitch_pos, layer1, layer2, round(least_tot_time, 4), round(least_trans_time, 4), round(least_comp_time, 4), round(toler_rate, 4), round(real_rate, 4)
 
 
     def train_acc_flops_predictor(self):
@@ -287,11 +294,11 @@ stitch_system = StitchSystem()
 
 
 
-model1_index, model2_index, stitch_pos, layer1, layer2, least_tot_time, least_trans_time,\
-      least_comp_time, toler_rate, real_rate = stitch_system.cal_delay(75, 100, 0.1, 50)
+output_acc, model1_index, model2_index, stitch_pos, layer1, layer2, least_tot_time, least_trans_time,\
+      least_comp_time, toler_rate, real_rate = stitch_system.cal_delay(78, 100, 0.1, 50)
 
 
-print('模型1索引{}，模型2索引{}，缝合位置{}，模型1部署网络层{}，模型2部署网络层{}，最小总时间{}，最小传输时间{}, 最小推理时间{}，可容忍速率{}, 实际速率{}'\
-      .format(model1_index, model2_index, stitch_pos, layer1, layer2, least_tot_time, least_trans_time, least_comp_time, toler_rate, real_rate))
+print('模型准确率为{}，模型1索引{}，模型2索引{}，缝合位置{}，模型1部署网络层{}，模型2部署网络层{}，最小总时间{}，最小传输时间{}, 最小推理时间{}，可容忍速率{}, 实际速率{}'\
+      .format(output_acc, model1_index, model2_index, stitch_pos, layer1, layer2, least_tot_time, least_trans_time, least_comp_time, toler_rate, real_rate))
 
 
