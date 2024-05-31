@@ -5,7 +5,7 @@ class KpiExtractor:
         self.key_lib = {
             # 'latency': ['latency', 'ms', 'milliseconds', 'second', 'seconds'],
             # 'jitter': ['jitter', 'ms', 'milliseconds', 'second', 'seconds'],
-            'delay': ['second', 'seconds', 'minute', 'minutes', 'hour', 'hours', 'ms', 'milliseconds'],
+            'delay': ['s', 'second', 'seconds', 'minute', 'minutes', 'hour', 'hours', 'ms', 'milliseconds'],
             'accuracy': ['percent', '%'],
             # 'throughput': ['throughput', 'kbps', 'mbps', 'gbps', 'bps', 'bit per second', 'bits per second'],
             # 'packet_loss': ['packet loss', 'percent', '%']
@@ -35,9 +35,34 @@ class KpiExtractor:
                     else:
                         value = match.group(5)
                         unit = match.group(6)
-                    extracted_kpis[kpi] = f"{value} {unit}"
+                    if unit in self.key_lib['delay']:
+                        value = KpiExtractor.convert_to_seconds(float(value), unit)
+                    else:
+                        value = float(value)
+                    
+                    extracted_kpis[kpi] = value
         
         return extracted_kpis
+
+    def convert_to_seconds(value, unit):
+        conversion_factors = {
+            's': 1,
+            'second': 1,
+            'seconds': 1,
+            'minute': 60,
+            'minutes': 60,
+            'hour': 3600,
+            'hours': 3600,
+            'ms': 0.001,
+            'milliseconds': 0.001
+        }
+
+        if unit in conversion_factors:
+            return value * conversion_factors[unit]
+        else:
+            raise ValueError(f"Unknown time unit: {unit}")
+    
+    
 
     def _units_for_kpi(self, kpi):
         # 返回一个正则表达式模式，匹配KPI的所有单位
@@ -47,6 +72,6 @@ class KpiExtractor:
 if __name__ == "__main__":
     # 示例用法
     extractor = KpiExtractor()
-    command = "I want to finish this task in 3 seconds with accuracy of 89%."
+    command = "I want to finish this task in 3ms with accuracy of 89%."
     result = extractor.kpi_extract(command)
     print(result)
