@@ -46,15 +46,15 @@ class KpiExtractor:
 
     def convert_to_seconds(value, unit):
         conversion_factors = {
-            's': 1,
-            'second': 1,
-            'seconds': 1,
-            'minute': 60,
-            'minutes': 60,
-            'hour': 3600,
-            'hours': 3600,
-            'ms': 0.001,
-            'milliseconds': 0.001
+            's': 1000,
+            'second': 1000,
+            'seconds': 1000,
+            'minute': 60000,
+            'minutes': 60000,
+            'hour': 3600000,
+            'hours': 3600000,
+            'ms': 1,
+            'milliseconds': 1
         }
 
         if unit in conversion_factors:
