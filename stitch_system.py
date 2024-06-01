@@ -298,10 +298,12 @@ class StitchSystem:
         if tolerative_trans_delay > best_trans_time:    # 存在带宽冗余
             toler_rate = data_size*num*trans_num/tolerative_trans_delay     # 可容忍速率
             best_time = self.delay_cmd*1e-3
+            output_trans_time = tolerative_trans_delay
         else:       # 不存在冗余带宽，直接按照网络最高带宽
             toler_rate = data_size*num*trans_num/best_trans_time
+            output_trans_time = best_trans_time
         real_rate = data_size*num*trans_num/best_trans_time
-        return best_combination, best_time*1e3, best_trans_time*1e3, best_comp_time*1e3, toler_rate, real_rate
+        return best_combination, best_time*1e3, output_trans_time*1e3, best_comp_time*1e3, toler_rate, real_rate
 
 
 
