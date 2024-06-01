@@ -14,7 +14,7 @@ class StitchSystem:
 
         # 每个模型所需要的Gflops
         self.model_flops = [1.3, 4.6, 17.6]
-        self.model_layers = 10      # 每个模型的实际层数
+        self.model_layers = 100      # 每个模型的实际层数
 
         self.min_acc = 72.1
         self.max_acc = 81.8
@@ -36,7 +36,6 @@ class StitchSystem:
                 模型1索引，模型2索引，缝合位置，模型1部署网络层，模型2部署网络层，最小总时间，最小传输时间, 最小推理时间，可容忍带宽
         '''
 
-        np.random.seed(40)
 
         self.delay_cmd = delay_cmd
         flops_predicted = self.predict_performance(acc_cmd)     # 预测所需计算量
@@ -49,6 +48,10 @@ class StitchSystem:
         # 最优模型组合下搜索最优部署策略
         (layer1, layer2), least_tot_time, least_trans_time, least_comp_time, toler_rate, real_rate = self.find_best_deployment(model1_index, model1_coef,\
                                                          model2_index, model2_coef, single_data_size, data_num)        # 最短时间
+
+        # if toler_rate != real_rate:     # 存在冗余带宽
+            
+
 
         # 输出准确率， 模型1索引，模型2索引，缝合位置，模型1部署网络层，模型2部署网络层，最小总时间，最小传输时间, 最小推理时间，可容忍带宽
         return round(output_acc, 4), model1_index, model2_index, stitch_pos, layer1, layer2, round(least_tot_time, 4), round(least_trans_time, 4), round(least_comp_time, 4), round(toler_rate, 4), round(real_rate, 4)
@@ -197,7 +200,7 @@ class StitchSystem:
                 
                 # 计算组合系数
                 if a != b:
-                    stitching_position = int(((target_flops - a) / (b - a)) * self.model_layers)        # 缝合位置
+                    stitching_position = int((((b-target_flops) / (b - a)) * self.model_layers)[0])        # 缝合位置
                     w1 = stitching_position / self.model_layers
                     w2 = 1 - w1
                     
@@ -284,16 +287,21 @@ class StitchSystem:
                     best_trans_time = trans_time
                     best_comp_time = comp_time
                     best_combination = (i, j)
+        
+        # best_comp_time *= 1e-3
+        # best_trans_time *= 1e-3
+        
         # 计算可容忍带宽
-        tolerative_trans_delay = self.delay_cmd - best_comp_time        # 传输容忍时间
+        tolerative_trans_delay = self.delay_cmd*1e-3 - best_comp_time        # 传输容忍时间
         # 总传输次数只与后置模型的位置有关
         trans_num = best_combination[1]
         if tolerative_trans_delay > best_trans_time:    # 存在带宽冗余
             toler_rate = data_size*num*trans_num/tolerative_trans_delay     # 可容忍速率
+            best_time = self.delay_cmd*1e-3
         else:       # 不存在冗余带宽，直接按照网络最高带宽
             toler_rate = data_size*num*trans_num/best_trans_time
         real_rate = data_size*num*trans_num/best_trans_time
-        return best_combination, best_time, best_trans_time, best_comp_time, toler_rate, real_rate
+        return best_combination, best_time*1e3, best_trans_time*1e3, best_comp_time*1e3, toler_rate, real_rate
 
 
 
@@ -304,7 +312,7 @@ stitch_system = StitchSystem()
 
 
 output_acc, model1_index, model2_index, stitch_pos, layer1, layer2, least_tot_time, least_trans_time,\
-      least_comp_time, toler_rate, real_rate = stitch_system.cal_delay(20, 63, 0.1, 500)
+      least_comp_time, toler_rate, real_rate = stitch_system.cal_delay(81, 100, 3*224*224*8/1024/1024, 20)
 
 
 print('模型准确率为{}，模型1索引{}，模型2索引{}，缝合位置{}，模型1部署网络层{}，模型2部署网络层{}，最小总时间{}，最小传输时间{}, 最小推理时间{}，可容忍速率{}, 实际速率{}'\
