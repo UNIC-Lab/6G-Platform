@@ -1,10 +1,9 @@
+# -*- coding: utf-8 -*-
 
-from sklearn.ensemble import GradientBoostingRegressor
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.model_selection import train_test_split
 import numpy as np
-import joblib
-
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
 
 
 class StitchSystem:
@@ -307,17 +306,17 @@ class StitchSystem:
 
 
 
+if __name__ == "__main__":
+
+    stitch_system = StitchSystem()
 
 
-stitch_system = StitchSystem()
+
+    output_acc, model1_index, model2_index, stitch_pos, layer1, layer2, least_tot_time, least_trans_time,\
+        least_comp_time, toler_rate, real_rate = stitch_system.cal_delay(81, 100, 3*224*224*8/1024/1024, 20)
 
 
-
-output_acc, model1_index, model2_index, stitch_pos, layer1, layer2, least_tot_time, least_trans_time,\
-      least_comp_time, toler_rate, real_rate = stitch_system.cal_delay(81, 100, 3*224*224*8/1024/1024, 20)
-
-
-print('模型准确率为{}，模型1索引{}，模型2索引{}，缝合位置{}，模型1部署网络层{}，模型2部署网络层{}，最小总时间{}，最小传输时间{}, 最小推理时间{}，可容忍速率{}, 实际速率{}'\
-      .format(output_acc, model1_index, model2_index, stitch_pos, layer1, layer2, least_tot_time, least_trans_time, least_comp_time, toler_rate, real_rate))
+    print('模型准确率为{}，模型1索引{}，模型2索引{}，缝合位置{}，模型1部署网络层{}，模型2部署网络层{}，最小总时间{}，最小传输时间{}, 最小推理时间{}，可容忍速率{}, 实际速率{}'\
+        .format(output_acc, model1_index, model2_index, stitch_pos, layer1, layer2, least_tot_time, least_trans_time, least_comp_time, toler_rate, real_rate))
 
 

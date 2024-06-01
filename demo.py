@@ -4,29 +4,24 @@ import os
 import time
 
 import gradio as gr
-import numpy as np
 from transformers import pipeline
 
-from kpi_extract import KpiExtractor
+from kpi_extract2 import KpiExtractor
+from stitch_system import StitchSystem
 
 
 def load_resnet18():
-    return pipeline("image-classification", model="microsoft/resnet-18")
+    return pipeline("image-classification", model="microsoft/resnet-18", device="cuda:0")
 
 def inference(delay, accuracy, image_data):
-    
-    with open("./assets/ILSVRC2012_validation_ground_truth.txt", "r", encoding="utf-8") as f:
-        labels = [int(label) for label in f.readlines()]
-    
+    delay = float(delay)
+    accuracy = float(accuracy)
     start_time = time.time()
-    delay = float(delay.split(' ')[0])
-    accuracy = float(accuracy.split(' ')[0])
     time_cost = None
-    acc = None
     classifier = load_resnet18()
     outputs = classifier(image_data)
 
-    time_step = delay / len(image_data)
+    time_step = delay / len(image_data) / 1000
     
     results = []
     for i, sample_output in enumerate(outputs):
@@ -34,27 +29,28 @@ def inference(delay, accuracy, image_data):
         tmp_delay = (i + 1)*time_step - (time.time() - start_time)
         if tmp_delay > 0:
             time.sleep(tmp_delay)
-        yield results, f"{time.time() - start_time} s", acc
+        yield results, f"{(time.time() - start_time)*1000} ms"
 
-    time_cost = f"{time.time() - start_time} s"
-    acc = f"{accuracy + np.random.uniform(0.1, 1.2)} %"
-    yield results, time_cost, acc
+    time_cost = f"{(time.time() - start_time)*1000} ms"
+    yield results, time_cost
 
 with gr.Blocks() as demo:
-    net_plot = gr.Plot()
-    prompt = gr.Textbox()
+    net_plot = gr.Plot(label="Network Architecture")
+    input_header = gr.Markdown("# Input")
+    prompt = gr.Textbox(label="User Prompt")
     images_data = gr.File(file_count="multiple")
     submit = gr.Button("Submit")
+    output_header = gr.Markdown("# Output")
+    kpi_header = gr.Markdown("## Resolved KPIs")
     with gr.Row():
-        latency_num = gr.Text(label="Latency")
-        jitter_num = gr.Text(label="Jitter")
-        delay_num = gr.Text(label="Delay")
-        accuracy_num = gr.Text(label="Accuracy")
-        throughput_num = gr.Text(label="Throughput")
-        packet_loss_num = gr.Text(label="Packet Loss")
+        kpi_acc = gr.Text(label="Accuracy (%)")
+        kpi_total_time = gr.Text(label="Total Time Cost (ms)")
+        kpi_comm_time = gr.Text(label="Communication Time Cost (ms)")
+        kpi_comp_time = gr.Text(label="Computation Time Cost (ms)")
+        kpi_throughput = gr.Text(label="Throughput (Mbps)")
     with gr.Row():
-        result_num1 = gr.Text(label="Time Cost")
-        result_num2 = gr.Text(label="Accuracy")
+        real_time_cost = gr.Text(label="Real Time Cost")
+    inference_header = gr.Markdown("## Inference Results")
     gallery = gr.Gallery(
         label="Results",
         columns=[9],
@@ -65,8 +61,8 @@ with gr.Blocks() as demo:
 
     prompt_examples = gr.Examples(
         examples=[
-            ["The system has an accuracy 90%, a 100 Mbps throughput, latency of 50 ms, a jitter of 5 ms, and packet loss of 0.1%. Also, the delay 10 seconds is critical."],
-            ["I want to finish this task in delay 3 seconds with accuracy of 89%."],
+            ["Completing this task in 10s is ok, but I require greater than 80% accuracy."],
+            ["I want to finish this task in 3 seconds with accuracy of 70%."],
         ],
         inputs=[prompt],
         label="Prompt Examples",
@@ -80,27 +76,41 @@ with gr.Blocks() as demo:
         label="Image Examples",
     )
 
-    def resolve_kpi(prompt):
+    def resolve_kpi(prompt, images_data):
         extractor = KpiExtractor()
-        the_kpis = extractor.kpi_extract(prompt)
+        the_demands = extractor.kpi_extract(prompt)
+        system_simulator = StitchSystem()
+        print(the_demands["accuracy"], the_demands["delay"])
+        the_kpis = system_simulator.cal_delay(the_demands["accuracy"], the_demands["delay"], 3*224*224*8/1024/1024, len(images_data))
+        # 模型1索引，模型2索引，缝合位置，模型1部署网络层，模型2部署网络层，最小总时间，最小传输时间, 最小推理时间，可容忍带宽
+        print(the_kpis)
+        real_model_acc = the_kpis[0]
+        pre_model_index = the_kpis[1]
+        post_model_index = the_kpis[2]
+        stitch_position = the_kpis[3]
+        pre_model_location = the_kpis[4]
+        post_model_location = the_kpis[5]
+        total_time = the_kpis[6]
+        comm_time = the_kpis[7]
+        comp_time = the_kpis[8]
+        throughput = the_kpis[9]
         return {
-            latency_num: the_kpis["latency"],
-            jitter_num: the_kpis["jitter"],
-            delay_num: the_kpis["delay"],
-            accuracy_num: the_kpis["accuracy"],
-            throughput_num: the_kpis["throughput"],
-            packet_loss_num: the_kpis["packet_loss"],
+            kpi_acc: real_model_acc,
+            kpi_total_time: total_time,
+            kpi_comm_time: comm_time,
+            kpi_comp_time: comp_time,
+            kpi_throughput: throughput,
         }
 
     submit.click(
         fn=resolve_kpi,
-        inputs=[prompt],
-        outputs=[latency_num, jitter_num, delay_num, accuracy_num, throughput_num, packet_loss_num]
+        inputs=[prompt, images_data],
+        outputs=[kpi_acc, kpi_total_time, kpi_comm_time, kpi_comp_time, kpi_throughput]
     ).then(
         fn=inference,
-        inputs=[delay_num, accuracy_num, images_data],
-        outputs=[gallery, result_num1, result_num2]
+        inputs=[kpi_total_time, kpi_acc, images_data],
+        outputs=[gallery, real_time_cost]
     )
 
-demo.launch(share=False)
+demo.launch(share=True)
 
